@@ -1,0 +1,33 @@
+name: Distributed C (DSTC) Build
+run-name: ${{github.actor}} building Distributed C (DSTC)
+on:
+  - push
+  - workflow_call
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Build ${{github.event_name}} event on reoi  ${{ github.repository }} - Branch  ${{ github.ref }}."
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Download and install Reliable Multicast.
+        run: |
+          # Extract the Reliable Multicast version to use from the
+          # RMC_VERSION file in the repo.
+          export RMC_VERSION=$(grep '^[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*$' RMC_VERSION)
+          cd /tmp
+          wget https://github.com/magnusfeuer/reliable_multicast/releases/download/v${RMC_VERSION}/reliable-multicast-dev_${RMC_VERSION}-1_all.deb
+          wget https://github.com/magnusfeuer/reliable_multicast/releases/download/v${RMC_VERSION}/reliable-multicast_${RMC_VERSION}-1_amd64.deb
+          sudo apt install ./reliable-multicast-dev_${RMC_VERSION}-1_all.deb ./reliable-multicast_${RMC_VERSION}-1_amd64.deb
+
+      # Remove me.
+      - run: dpkg-query -L reliable-multicast-dev
+      - run: dpkg-query -L reliable-multicast
+      - run: make all
+      - run: sudo make install 
+      - run: sudo ldconfig
+      - run: make examples
+      - run: ./run_tests.sh

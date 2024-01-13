@@ -129,7 +129,10 @@ clean:
 #
 #	Install the generated files.
 #
-install: ${LIB_SO_TARGET} ${LIB_TARGET} uninstall
+install: ${LIB_SO_TARGET} ${LIB_TARGET}
+	@echo "------------------------------------------------------------------------"
+	@echo "Installing DSTC to ${INSTALL_DIR}"
+	@echo "------------------------------------------------------------------------"
 	install -d ${INSTALL_DIR}/lib
 	install -d ${INSTALL_DIR}/include
 	install -m 0644 ${INST_HDR}  ${INSTALL_DIR}/include
@@ -138,11 +141,15 @@ install: ${LIB_SO_TARGET} ${LIB_TARGET} uninstall
 	(cd ${INSTALL_DIR}/lib && ln -s ${LIB_SO_TARGET} ${LIB_SO_SONAME_TARGET})
 	(cd ${INSTALL_DIR}/lib && ln -s ${LIB_SO_TARGET} ${LIB_SO_BASE_NAME})
 	INSTALL_DIR=${INSTALL_DIR}/share/dstc/examples make -C examples install
-
+	@echo
+	@echo
 #
 #	Uninstall the generated files.
 #
 uninstall:
+	@echo "------------------------------------------------------------------------"
+	@echo "Uninstalling DSTC from ${INSTALL_DIR}"
+	@echo "------------------------------------------------------------------------"
 	INSTALL_DIR=${INSTALL_DIR}/share/dstc/examples ${MAKE} -C examples uninstall;
 	rm -f ${INSTALL_DIR}/lib/${LIB_TARGET};
 	rm -f ${INSTALL_DIR}/include/${INST_HDR};
@@ -154,6 +161,8 @@ uninstall:
 	@-rmdir ${INSTALL_DIR}/share/dstc/examples
 	@-rmdir ${INSTALL_DIR}/share/dstc
 	@-rmdir ${INSTALL_DIR}/share
+	@echo
+	@echo
 
 tar: ${TARBALL_NAME}
 
@@ -165,13 +174,16 @@ ${TARBALL_NAME}: clean
 # Requires fpm https://fpm.readthedocs.io/en/v1.15.1/index.html
 #
 debian: INSTALL_DIR=/tmp/dstc-install
-debian: clean install ${DEBIAN_PACKAGE_DEV_NAME} ${DEBIAN_PACKAGE_NAME}
+debian: uninstall install ${DEBIAN_PACKAGE_DEV_NAME} ${DEBIAN_PACKAGE_NAME}
 
 #
 # Create DSTC library package
 #
 ${DEBIAN_PACKAGE_NAME}: INSTALL_DIR=/tmp/dstc-install
-${DEBIAN_PACKAGE_NAME}: install
+${DEBIAN_PACKAGE_NAME}:
+	@echo "------------------------------------------------------------------------"
+	@echo "Creating debian package ${DEBIAN_PACKAGE_NAME}"
+	@echo "------------------------------------------------------------------------"
 	rm -f ${DEBIAN_PACKAGE_NAME}
 	echo -e "#!/usr/bin/env bash\n/usr/sbin/ldconfig" > /tmp/postinst.sh
 	chmod 755 /tmp/postinst.sh
@@ -194,6 +206,9 @@ ${DEBIAN_PACKAGE_NAME}: install
 		${INSTALL_DIR}/lib/${LIB_SO_SONAME_TARGET}=lib/${LIB_SO_SONAME_TARGET} \
 		${INSTALL_DIR}/lib/${LIB_SO_TARGET}=lib/${LIB_SO_TARGET} \
 		${INSTALL_DIR}/lib/${LIB_SO_BASE_NAME}=lib/${LIB_SO_BASE_NAME}
+	@echo
+	@echo
+
 
 #
 # Create development package, including examples
@@ -204,16 +219,21 @@ ${DEBIAN_PACKAGE_DEV_NAME}: INSTALL_DIR=/tmp/dstc-install
 # Traverse all files in the specified examples and construct FPM file
 # arguments.
 #
-${DEBIAN_PACKAGE_DEV_NAME}: EXAMPLE_FILES != \
+${DEBIAN_PACKAGE_DEV_NAME}: EXAMPLE_FILES = $(shell \
 	for example_dir in ${EXAMPLES}; \
 	do \
-		for example_file in ${INSTALL_DIR}/share/dstc/examples/$$example_dir/*; \
+		for example_file in ${INSTALL_DIR}/share/dstc/examples/$$example_dir/Makefile \
+			${INSTALL_DIR}/share/dstc/examples/$$example_dir/*.[h,c]; \
 		do \
-			echo "$$example_file=/share/dstc/examples/$$example_file"; \
+			echo $$example_file=/share/dstc/examples/$$example_dir/$$(basename $$example_file); \
 		done \
-	done
+	done)
 
-${DEBIAN_PACKAGE_DEV_NAME}: install examples_clean
+${DEBIAN_PACKAGE_DEV_NAME}: install install_examples
+	@echo "------------------------------------------------------------------------"
+	@echo "Creating debian development package ${DEBIAN_PACKAGE_DEV_NAME}"
+	@echo "------------------------------------------------------------------------"
+	rm -f ${DEBIAN_PACKAGE_DEV_NAME}
 	fpm -s dir -t deb \
 		-p ${@} \
 		--name ${PACKAGE_DEV_BASE_NAME} \
@@ -226,7 +246,8 @@ ${DEBIAN_PACKAGE_DEV_NAME}: install examples_clean
 		--maintainer "Magnus Feuer" \
 		${INSTALL_DIR}/include/dstc.h=include/dstc.h \
 		${EXAMPLE_FILES}
-
+	@echo
+	@echo
 #
 # Build the examples listed in EXAMPLES
 #

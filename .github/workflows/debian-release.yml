@@ -1,0 +1,40 @@
+name: Distributed C - DSTC Release
+
+run-name: ${{github.actor}} Debian Release DSTC
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  create-debian-pkg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install packages
+        run: sudo apt install git ruby-rubygems squashfs-tools
+
+      - name: Install fpm
+        run: sudo gem install fpm
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Download and install Reliable Multicast.
+        run: |
+          # Extract the Reliable Multicast version to use from the
+          # RMC_VERSION file in the repo.
+          export RMC_VERSION=$(grep '^[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*$' RMC_VERSION)
+          cd /tmp
+          wget https://github.com/magnusfeuer/reliable_multicast/releases/download/v${RMC_VERSION}/reliable-multicast-dev_${RMC_VERSION}-1_all.deb
+          wget https://github.com/magnusfeuer/reliable_multicast/releases/download/v${RMC_VERSION}/reliable-multicast_${RMC_VERSION}-1_amd64.deb
+          sudo apt install ./reliable-multicast-dev_${RMC_VERSION}-1_all.deb ./reliable-multicast_${RMC_VERSION}-1_amd64.deb
+
+      - name: Build Debian paackages.
+        run: make debian
+
+      - name: Create GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "*.deb"
+          name: Distributed C - DSTC Release ${{ github.ref }}
