@@ -1,6 +1,6 @@
 #
 # Executable example code from the README.md file
-#
+# NEEDS UPDATING
 
 NAME=cpp
 

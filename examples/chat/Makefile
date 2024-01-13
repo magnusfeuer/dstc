@@ -2,9 +2,8 @@
 # Executable example code from the README.md file
 #
 
+
 NAME=chat
-# FIXME variable substitution is a thing
-INCLUDE=../../dstc.h
 
 TARGET=${NAME}
 TARGET_NOMACRO=${TARGET}_nomacro
@@ -15,46 +14,56 @@ SOURCE=$(OBJ:%.o=%.c)
 NOMACRO_OBJ=$(OBJ:%.o=%_nomacro.o)
 NOMACRO_SOURCE=$(NOMACRO_OBJ:%.o=%.c)
 
-CFLAGS += -I../.. -pthread -Wall -O2 ${USE_POLL}
+#
+# Default paths, if nothing else is specified 
+#
+DSTC_INCDIR ?= /usr/local/lib
+RMC_INCDIR ?= /usr/local/include
+INCLUDE_PATHS ?= -I${DSTC_INCDIR} -I${RMC_INCDIR}
 
-.PHONY: all clean install uninstall nomacro
+DSTC_LIBDIR ?= /usr/local/lib
+RMC_LIBDIR ?= /usr/local/lib
+LIBRARY_PATHS ?= -L${DSTC_LIBDIR} -L${RMC_LIBDIR}
 
+INSTALL_DIR ?= /usr/local/share/dstc/examples/${NAME}
+
+CFLAGS += ${INCLUDE_PATHS} -Wall -pthread -O2 ${USE_POLL}
+
+.PHONY: all clean install nomacro uninstall
 
 all: $(TARGET)
 
+nomacro:  $(TARGET_NOMACRO) 
 
-nomacro:  $(TARGET_NOMACRO)
 
-#
-# The client is built as a regular binary
-#
 $(TARGET): $(OBJ)
-	$(CC)  $(CFLAGS) $^ -L/usr/local/lib -ldstc -lrmc -o $@ $(LDFLAGS)
-
-#
-# Recompile everything if dstc.h changes
-#
-(OBJ): $(INCLUDE)
+	$(CC) $(CFLAGS) $(OBJ) ${LIBRARY_PATHS} -ldstc -lrmc -o $@ $(LDFLAGS)
 
 
 clean:
-	rm -f $(TARGET) $(OBJ) *~ \
-	$(TARGET_NOMACRO) $(NOMACRO_SOURCE) $(NOMACRO_OBJ)
-
+	rm -f  $(OBJ) $(TARGET)   *~ \
+	$(TARGET_NOMACRO) \
+	$(NOMACRO_SOURCE) \
+	$(NOMACRO_OBJ) 
 
 install:
-	install -d ${DESTDIR}/bin
-	install -m 0755 ${TARGET} ${DESTDIR}/bin
+	install -d ${INSTALL_DIR}
+	install -m 0644 ${SOURCE} ${INSTALL_DIR}
+	install -m 0644 Makefile ${INSTALL_DIR}
 
 uninstall:
-	rm -f ${DESTDIR}/bin/${TARGET}
+	rm -f ${INSTALL_DIR}/${SOURCE}
+	rm -f ${INSTALL_DIR}/Makefile
+	-rmdir ${INSTALL_DIR}
 
 #
-# The client is built as a regular binary
+# Expand the dstc.h client and server macros that exports and import funcitons.
+# Use these if you are debugging your code and need to see what is going on
+# between your code and the dstc network traffic.
 #
-$(TARGET_NOMACRO): $(NOMACRO_OBJ)
-	$(CC) $(CFLAGS) -L/usr/local/lib -ldstc -lrmc $^ -o $@ $(LDFLAGS)
+$(TARGET_NOMACRO) : $(NOMACRO_OBJ) $(DSTCLIB)
+	$(CC) $(CFLAGS) $(LIBRARY_PATHS) $^ -ldstc -lrmc -o $@ $(LDFLAGS)
 
 
-$(NOMACRO_SOURCE): ${SOURCE} ../../dstc.h
-	cpp ${INCPATH} ${SOURCE} | clang-format | grep -v '^# [0-9]' > ${NOMACRO_SOURCE}
+$(NOMACRO_SOURCE): ${SOURCE}
+	$(CC) ${INCLUDE_PATHS} -E ${SOURCE} | clang-format | grep -v '^# [0-9]' > ${NOMACRO_SOURCE}
