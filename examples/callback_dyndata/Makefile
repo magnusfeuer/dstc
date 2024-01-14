@@ -2,15 +2,13 @@
 # Executable example code from the README.md file
 #
 
-NAME=callback_dyndata
 
-# FIXME variable substitution is a thing
-INCLUDE=../../dstc.h
+NAME=callback_dyndata
 
 TARGET_CLIENT=${NAME}_client
 TARGET_NOMACRO_CLIENT=${TARGET_CLIENT}_nomacro
 
-CLIENT_OBJ=callback_dyndata_client.o
+CLIENT_OBJ=${NAME}_client.o
 CLIENT_SOURCE=$(CLIENT_OBJ:%.o=%.c)
 
 CLIENT_NOMACRO_OBJ=$(CLIENT_OBJ:%.o=%_nomacro.o)
@@ -22,13 +20,30 @@ CLIENT_NOMACRO_SOURCE=$(CLIENT_NOMACRO_OBJ:%.o=%.c)
 TARGET_SERVER=${NAME}_server
 TARGET_NOMACRO_SERVER=${TARGET_SERVER}_nomacro
 
-SERVER_OBJ=callback_dyndata_server.o
+SERVER_OBJ=${NAME}_server.o
 SERVER_SOURCE=$(SERVER_OBJ:%.o=%.c)
 
 SERVER_NOMACRO_OBJ=$(SERVER_OBJ:%.o=%_nomacro.o)
 SERVER_NOMACRO_SOURCE=$(SERVER_NOMACRO_OBJ:%.o=%.c)
 
-CFLAGS += -I../.. -pthread -Wall -pthread -O2 ${USE_POLL}
+#
+# Default paths, if nothing else is specified 
+#
+DSTC_INCDIR ?= /usr/local/lib
+RMC_INCDIR ?= /usr/local/include
+INCLUDE_PATHS ?= -I${DSTC_INCDIR} -I${RMC_INCDIR}
+
+DSTC_LIBDIR ?= /usr/local/lib
+RMC_LIBDIR ?= /usr/local/lib
+LIBRARY_PATHS ?= -L${DSTC_LIBDIR} -L${RMC_LIBDIR}
+
+INSTALL_DIR ?= /usr/local/share/dstc/examples/${NAME}
+
+#
+# -Wno-address-of-packed-member is to discar a warning about unaligned
+# pointer values. See README.md for details.
+#
+CFLAGS += -Wno-address-of-packed-member ${INCLUDE_PATHS} -Wall -pthread -O2 ${USE_POLL}
 
 .PHONY: all clean install nomacro uninstall
 
@@ -37,15 +52,12 @@ all: $(TARGET_SERVER) $(TARGET_CLIENT)
 nomacro:  $(TARGET_NOMACRO_SERVER) $(TARGET_NOMACRO_CLIENT)
 
 $(TARGET_SERVER): $(SERVER_OBJ)
-	$(CC) $(CFLAGS) $^ -L/usr/local/lib -ldstc -lrmc -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(SERVER_OBJ) ${LIBRARY_PATHS} -ldstc -lrmc -o $@ $(LDFLAGS)
 
 
 $(TARGET_CLIENT): $(CLIENT_OBJ)
-	$(CC) $(CFLAGS) $^ -L/usr/local/lib -ldstc -lrmc -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(CLIENT_OBJ) ${LIBRARY_PATHS} -ldstc -lrmc -o $@ $(LDFLAGS)
 
-
-# Recompile everything if dstc.h changes
-$(SERVER_OBJ) $(CLIENT_OBJ): $(INCLUDE)
 
 clean:
 	rm -f $(TARGET_CLIENT) $(CLIENT_OBJ) $(TARGET_SERVER) $(SERVER_OBJ)  *~ \
@@ -54,26 +66,33 @@ clean:
 	$(CLIENT_NOMACRO_OBJ) $(SERVER_NOMACRO_OBJ)
 
 install:
-	install -d ${DESTDIR}/bin
-	install -m 0755 ${TARGET_CLIENT} ${DESTDIR}/bin
-	install -m 0755 ${TARGET_SERVER} ${DESTDIR}/bin
+	install -d ${INSTALL_DIR}
+	install -m 0644 ${CLIENT_SOURCE} ${INSTALL_DIR}
+	install -m 0644 ${SERVER_SOURCE} ${INSTALL_DIR}
+	install -m 0644 callback_dyndata.h ${INSTALL_DIR}
+	install -m 0644 Makefile ${INSTALL_DIR}
 
 uninstall:
-	rm -f ${DESTDIR}/bin/${TARGET_CLIENT}
-	rm -f ${DESTDIR}/bin/${TARGET_SERVER}
+	rm -f ${INSTALL_DIR}/${CLIENT_SOURCE}
+	rm -f ${INSTALL_DIR}/${SERVER_SOURCE}
+	rm -f ${INSTALL_DIR}/callback_dyndata.h
+	rm -f ${INSTALL_DIR}/Makefile
+	-rmdir ${INSTALL_DIR}
 
 #
-# The client is built as a regular binary
+# Expand the dstc.h client and server macros that exports and import funcitons.
+# Use these if you are debugging your code and need to see what is going on
+# between your code and the dstc network traffic.
 #
 $(TARGET_NOMACRO_CLIENT) : $(CLIENT_NOMACRO_OBJ) $(DSTCLIB)
-	$(CC) $(CFLAGS) $^ -L/usr/local/lib -ldstc -lrmc -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(LIBRARY_PATHS) $^ -ldstc -lrmc -o $@ $(LDFLAGS)
 
 $(TARGET_NOMACRO_SERVER): $(SERVER_NOMACRO_OBJ) $(DSTCLIB)
-	$(CC) $(CFLAGS) $^ -L/usr/local/lib -ldstc -lrmc -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(LIBRARY_PATHS) $^ -ldstc -lrmc -o $@ $(LDFLAGS)
 
 
-$(CLIENT_NOMACRO_SOURCE): ${CLIENT_SOURCE} ../../dstc.h
-	cpp ${INCPATH} -E ${CLIENT_SOURCE} | clang-format | grep -v '^# [0-9]' > ${CLIENT_NOMACRO_SOURCE}
+$(CLIENT_NOMACRO_SOURCE): ${CLIENT_SOURCE}
+	$(CC) ${INCLUDE_PATHS} -E ${CLIENT_SOURCE} | clang-format | grep -v '^# [0-9]' > ${CLIENT_NOMACRO_SOURCE}
 
-$(SERVER_NOMACRO_SOURCE): ${SERVER_SOURCE} ../../dstc.h
-	cpp ${INCPATH} -E ${SERVER_SOURCE} | clang-format | grep -v '^# [0-9]' > ${SERVER_NOMACRO_SOURCE}
+$(SERVER_NOMACRO_SOURCE): ${SERVER_SOURCE}
+	$(CC) ${INCLUDE_PATHS} -E ${SERVER_SOURCE} | clang-format | grep -v '^# [0-9]' > ${SERVER_NOMACRO_SOURCE}

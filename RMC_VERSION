@@ -1,0 +1,15 @@
+#
+# Version of Reliable Multicast to use.
+#
+# The docker generic build file pulls this version from the URLs below and installs them in the docker image.
+#
+# https://github.com/magnusfeuer/reliable_multicast/releases/download/v1.8.1/reliable-multicast_${VERSION}-1_amd64.deb
+# https://github.com/magnusfeuer/reliable_multicast/releases/download/v1.8.1/reliable-multicast-dev_1.8.1-1_all.deb
+#
+#
+# Debian packae build will bake this rmc verison into the dstc debian package's dependencies.
+#
+# Please note that you must install the main (non-dev) package above in your deployment environment for any DSTC
+# programs to work.
+#
+1.8.1

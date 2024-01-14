@@ -79,12 +79,37 @@ on x86.
 See gcc `__attribute__ ((packed))` and  `__attribute__ ((endianness(big)))`
 for how this can easily be achieved in a mixed-architecture deployment.
 
+## Packed structs may have unaligned members
+Individual members of a packed struct may end up on unaligned
+addresses, making pointers to those members potentially invalid.
+
+Example:
+
+```C
+    struct  __attribute__((packed)) my_struct {
+        char a;
+        int b;
+    } my_var;
+
+    my_var.a = 'x';
+    my_var.b = 4711;
+
+    int* my_pointer = &my_var.b; // MAY NOT BE VALID.
+
+```
+
+The workaround / solution is to only use pointers to the struct
+variable itself, and avoid pointers to individual struct members.
+
+Use `-Wno-address-of-packed-member` as a compiler flag to GCC to
+silence the warning.
+
 
 # BUILDING
 DSTC uses reliable_multicast (RMC)as its transport layer. Download, build
 and install RMC from:
 
-[Reliable Multicast v1.5](https://github.com/PDXostc/reliable_multicast/releases/tag/v1.5)
+[Reliable Multicast v1.8.1](https://github.com/PDXostc/reliable_multicast/releases/tag/v1.8.1)
 
 Update `Makefile` in this DSTC directory to point to the include and library directories of the installed RMC code.
 

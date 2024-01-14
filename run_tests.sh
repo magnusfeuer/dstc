@@ -24,6 +24,19 @@ do
       cd $TEST
     fi
 
+    if [ ! -f ./${TEST}_server ]
+    then
+        echo "${PWD}/${TEST}_server: Not found"
+        exit 1
+    fi
+
+    if [ ! -f ./${TEST}_client ]
+    then
+        echo "${PWD}/${TEST}_client: Not found"
+        exit 1
+    fi
+    echo "Passed file check"
+    
     timeout 15s ./${TEST}_server &
     timeout 15s ./${TEST}_client &
     wait %1

@@ -1,45 +1,34 @@
 
-SUBDIRS =                 \
-	print_name_and_age    \
-	dynamic_data          \
-	string_data          \
-	print_struct          \
-	callback              \
-	callback_dyndata      \
-	no_argument	      \
-	stress                \
-	loopback              \
-	chat                  \
-	thread_stress         \
-	many_arguments        \
-	cpp                   \
-
 .PHONY: all clean install uninstall
-
+export RMC_LIBDIR
+export DSTC_LIBDIR
+export RMC_INCDIR
+export DSTC_INCDIR
 export USE_POLL
 
-all: $(SUBDIRS)
-	@for dir in $(SUBDIRS); \
+all: $(EXAMPLES)
+	@for dir in $(EXAMPLES); \
 	do \
 		$(MAKE) -C $$dir; \
 	done
 
-clean: $(SUBDIRS)
-	@for dir in $(SUBDIRS); \
+clean: $(EXAMPLES)
+	@for dir in $(EXAMPLES); \
 	do \
 	    $(MAKE) -C $$dir clean; \
 	done
 
 
-install: $(SUBDIRS)
-	@for dir in $(SUBDIRS); \
+install: $(EXAMPLES)
+	@for dir in $(EXAMPLES); \
 	do \
-	    $(MAKE) DESTDIR=${DESTDIR} -C $$dir install; \
+		INSTALL_DIR=${INSTALL_DIR}/$$dir $(MAKE)  -C $$dir install; \
 	done \
 
 
-uninstall: $(SUBDIRS)
-	@for dir in $(SUBDIRS); \
+uninstall: $(EXAMPLES)
+	@for dir in $(EXAMPLES); \
 	do \
-	    $(MAKE) DESTDIR=${DESTDIR} -C $$dir uninstall; \
+		INSTALL_DIR=${INSTALL_DIR}/$$dir $(MAKE)  -C $$dir uninstall; \
 	done
+
